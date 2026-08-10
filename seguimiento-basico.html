@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seguimiento de Pacientes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --borde:#cd8e9d;
+    --fondo:#fadae1;
+    --texto:#643000;
+    --blanco:#fffaf9;
+    --ok:#7a9b76;
+    --alerta:#d99a3f;
+    --vencido:#c1585a;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Karla', sans-serif;
+    background:var(--fondo);
+    color:var(--texto);
+    min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Fraunces', serif;}
+  .hidden{display:none !important;}
+
+  /* ---------- Login ---------- */
+  #loginScreen{
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .login-card{
+    background:var(--blanco); border:1px solid var(--borde); border-radius:18px;
+    padding:40px 32px; width:100%; max-width:380px; text-align:center;
+  }
+  .login-card h1{font-size:1.6rem; margin-bottom:4px;}
+  .login-card p.subtitle{font-style:italic; color:var(--borde); font-size:0.9rem; margin-bottom:28px;}
+  input{
+    width:100%; padding:12px 14px; border:1px solid var(--borde); border-radius:10px;
+    font-family:'Karla',sans-serif; font-size:0.95rem; margin-bottom:12px; background:var(--blanco);
+    color:var(--texto);
+  }
+  input:focus{outline:2px solid var(--borde); outline-offset:1px;}
+  button{
+    font-family:'Karla',sans-serif; font-weight:700; cursor:pointer; border:none;
+    border-radius:10px; padding:12px 18px; font-size:0.95rem;
+  }
+  .btn-primary{background:var(--texto); color:var(--blanco); width:100%;}
+  .btn-primary:hover{opacity:0.9;}
+  .btn-secondary{background:transparent; color:var(--texto); border:1px solid var(--borde);}
+  .error-msg{color:var(--vencido); font-size:0.85rem; margin-top:8px; min-height:1em;}
+  .setup-note{font-size:0.75rem; color:#8a7365; margin-top:20px; line-height:1.4;}
+
+  /* ---------- App shell ---------- */
+  header{
+    background:var(--blanco); border-bottom:1px solid var(--borde);
+    padding:16px 24px; display:flex; align-items:center; justify-content:space-between;
+  }
+  header .brand{font-size:1.3rem; color:var(--texto);}
+  header .brand span{color:var(--borde); font-style:italic; font-size:0.7rem; display:block; font-family:'Karla',sans-serif;}
+  #logoutBtn{background:transparent; color:var(--borde); font-size:0.85rem; border:1px solid var(--borde);}
+
+  main{max-width:720px; margin:0 auto; padding:24px 16px 80px;}
+
+  .tabs{display:flex; gap:8px; margin-bottom:20px;}
+  .tab-btn{
+    background:transparent; color:var(--texto); border:1px solid var(--borde);
+    padding:9px 16px; border-radius:20px; font-size:0.85rem; font-weight:700;
+  }
+  .tab-btn.active{background:var(--texto); color:var(--blanco); border-color:var(--texto);}
+
+  .toolbar{display:flex; gap:10px; margin-bottom:20px;}
+  .toolbar input{margin-bottom:0; flex:1;}
+  .toolbar button{white-space:nowrap; background:var(--texto); color:var(--blanco);}
+
+  .patient-card{
+    background:var(--blanco); border:1px solid var(--borde); border-radius:14px;
+    padding:16px 18px; margin-bottom:12px; cursor:pointer; display:flex;
+    justify-content:space-between; align-items:center; gap:12px;
+    transition:transform .12s ease;
+  }
+  .patient-card:hover{transform:translateY(-1px);}
+  .patient-card .name{font-weight:700; font-size:1.02rem;}
+  .patient-card .meta{font-size:0.8rem; color:#8a7365; margin-top:2px;}
+  .badge{
+    font-size:0.72rem; font-weight:700; padding:5px 10px; border-radius:20px; color:white;
+    white-space:nowrap;
+  }
+  .badge.vencido{background:var(--vencido);}
+  .badge.alerta{background:var(--alerta);}
+  .badge.ok{background:var(--ok);}
+  .badge.ninguno{background:#b8a89e;}
+
+  .today-box{
+    background:var(--texto); border-radius:16px; padding:18px 20px; margin-bottom:22px;
+  }
+  .today-box h2{color:var(--fondo); font-size:1.15rem; margin-bottom:2px;}
+  .today-box .today-sub{color:var(--fondo); opacity:0.75; font-size:0.8rem; margin-bottom:14px;}
+  .today-box .empty-today{color:var(--fondo); opacity:0.8; font-size:0.88rem;}
+  .today-item{
+    background:var(--blanco); border-radius:10px; padding:10px 14px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center; cursor:pointer; gap:10px;
+  }
+  .today-item:last-child{margin-bottom:0;}
+  .today-item .room{
+    font-weight:700; font-size:0.78rem; color:var(--borde); background:var(--fondo);
+    border-radius:8px; padding:3px 8px; min-width:18px; text-align:center;
+  }
+  .today-item .name{font-weight:700; font-size:0.92rem; flex:1;}
+
+  .empty-state{
+    text-align:center; padding:60px 20px; color:#8a7365;
+  }
+  .empty-state h3{color:var(--texto); margin-bottom:8px;}
+
+  /* ---------- Patient detail ---------- */
+  .back-link{
+    background:none; border:none; color:var(--borde); font-weight:700; font-size:0.9rem;
+    margin-bottom:16px; padding:0; cursor:pointer;
+  }
+  .detail-card{
+    background:var(--blanco); border:1px solid var(--borde); border-radius:14px;
+    padding:20px; margin-bottom:20px;
+  }
+  .detail-card h2{font-size:1.4rem; margin-bottom:4px;}
+  .detail-card .meta-row{font-size:0.85rem; color:#8a7365; margin-bottom:4px;}
+  .detail-actions{margin-top:14px; display:flex; gap:8px;}
+  .detail-actions button{font-size:0.8rem; padding:8px 14px;}
+
+  .section-title{font-size:1rem; margin:24px 0 12px; color:var(--texto);}
+
+  .timeline-item{
+    background:var(--blanco); border-left:3px solid var(--borde); border-radius:0 10px 10px 0;
+    padding:12px 16px; margin-bottom:10px;
+  }
+  .timeline-item .fecha{font-weight:700; font-size:0.85rem;}
+  .timeline-item .nota{font-size:0.9rem; margin-top:4px;}
+  .timeline-item .proxima{font-size:0.78rem; color:#8a7365; margin-top:6px;}
+  .timeline-item .copy-btn{
+    font-size:0.72rem; color:var(--borde); background:none; border:none; padding:6px 0 0;
+    font-weight:700; cursor:pointer;
+  }
+
+  .form-block{
+    background:var(--blanco); border:1px solid var(--borde); border-radius:14px;
+    padding:20px; margin-top:20px;
+  }
+  .form-block label{display:block; font-size:0.8rem; font-weight:700; margin-bottom:4px; margin-top:12px;}
+  .form-block label:first-child{margin-top:0;}
+  textarea{
+    width:100%; padding:12px 14px; border:1px solid var(--borde); border-radius:10px;
+    font-family:'Karla',sans-serif; font-size:0.9rem; resize:vertical; min-height:70px;
+    color:var(--texto);
+  }
+  .form-actions{display:flex; gap:10px; margin-top:16px;}
+  .form-actions .btn-primary{width:auto; flex:1;}
+
+  /* ---------- Modal (nuevo paciente) ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(100,48,0,0.35); display:flex;
+    align-items:center; justify-content:center; padding:20px; z-index:50;
+  }
+  .modal-card{
+    background:var(--blanco); border-radius:16px; padding:26px; width:100%; max-width:420px;
+  }
+  .modal-card h3{margin-bottom:16px;}
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--texto); color:var(--blanco); padding:10px 20px; border-radius:20px;
+    font-size:0.85rem; opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="brand">Seguimiento<span>Pacientes que estás viendo</span></div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <div id="dashboardView">
+      <div class="tabs">
+        <button class="tab-btn active" id="tabTodayBtn" data-tab="today">Ronda del día</button>
+        <button class="tab-btn" id="tabPatientsBtn" data-tab="patients">Pacientes</button>
+      </div>
+
+      <div id="todayPanel" class="tab-panel">
+        <div id="todaySection"></div>
+      </div>
+
+      <div id="patientsPanel" class="tab-panel hidden">
+        <div class="toolbar">
+          <input type="text" id="searchInput" placeholder="Buscar paciente...">
+          <button id="newPatientBtn">+ Nuevo paciente</button>
+        </div>
+        <div id="patientList"></div>
+      </div>
+    </div>
+
+    <!-- DETALLE PACIENTE -->
+    <div id="detailView" class="hidden">
+      <button class="back-link" id="backBtn">&larr; Volver</button>
+      <div class="detail-card">
+        <h2 id="detailNombre"></h2>
+        <div class="meta-row" id="detailTelefono"></div>
+        <div class="detail-actions">
+          <button class="btn-secondary" id="editPatientBtn">Editar datos</button>
+          <button class="btn-secondary" id="deletePatientBtn" style="color:#c1585a; border-color:#c1585a;">Eliminar paciente</button>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <h3 class="section-title" style="margin-top:0;">Notas del paciente</h3>
+        <textarea id="detailNotasTextarea" placeholder="Ej: respuesta de interconsulta, contexto general, cosas a tener en cuenta..." style="min-height:120px;"></textarea>
+        <div class="form-actions">
+          <button class="btn-primary" id="saveNotasBtn">Guardar nota</button>
+          <button class="btn-secondary" id="copyNotasBtn">Copiar</button>
+        </div>
+      </div>
+
+      <h3 class="section-title">Historial de seguimientos</h3>
+      <div id="timelineList"></div>
+
+      <div class="form-block">
+        <h3 class="section-title" style="margin-top:0;">Registrar seguimiento</h3>
+        <label for="segFecha">Fecha de esta sesión</label>
+        <input type="date" id="segFecha">
+        <label for="segNota">Nota breve</label>
+        <textarea id="segNota" placeholder="Ej: Refiere mejoría en el sueño, ansiedad estable..."></textarea>
+        <label for="segProxima">Próximo seguimiento (fecha)</label>
+        <input type="date" id="segProxima">
+        <div class="form-actions">
+          <button class="btn-primary" id="saveSegBtn">Guardar seguimiento</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL NUEVO / EDITAR PACIENTE -->
+<div id="patientModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3 id="modalTitle">Nuevo paciente</h3>
+    <label>Nombre</label>
+    <input type="text" id="modalNombre" placeholder="Nombre completo">
+    <label>Teléfono (opcional)</label>
+    <input type="text" id="modalTelefono" placeholder="300 000 0000">
+    <label>Habitación (opcional)</label>
+    <input type="text" id="modalHabitacion" placeholder="Ej: 304">
+    <label>Notas generales (opcional)</label>
+    <textarea id="modalNotas" placeholder="Motivo de consulta, contexto breve..."></textarea>
+    <label>Próximo seguimiento (opcional)</label>
+    <input type="date" id="modalProxima">
+    <div class="form-actions">
+      <button class="btn-secondary" id="modalCancelBtn">Cancelar</button>
+      <button class="btn-primary" id="modalSaveBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+/* =========================================================
+   1. CONFIGURA AQUÍ TU PROPIO PROYECTO FIREBASE
+   (Project Settings > General > "Your apps" > Config)
+   Este proyecto debe ser TUYO, separado del de Luisa,
+   para que tus datos de pacientes queden privados.
+   ========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyAsk5ip672wfnLnQiHoZzCzkOMa5njgkVE",
+  authDomain: "hospital-la-maria.firebaseapp.com",
+  projectId: "hospital-la-maria",
+  storageBucket: "hospital-la-maria.firebasestorage.app",
+  messagingSenderId: "1052089536899",
+  appId: "1:1052089536899:web:f28fe600fc37f9e65066b6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+let patients = [];
+let activePatientId = null;
+let editingPatientId = null;
+
+// ---------- Helpers ----------
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(dateStr + 'T00:00:00');
+  return Math.round((target - today) / 86400000);
+}
+
+function urgencyBadge(dateStr){
+  const d = daysUntil(dateStr);
+  if(d === null) return '<span class="badge ninguno">Sin fecha</span>';
+  if(d < 0) return `<span class="badge vencido">Vencido hace ${Math.abs(d)}d</span>`;
+  if(d <= 3) return `<span class="badge alerta">En ${d}d</span>`;
+  return `<span class="badge ok">En ${d}d</span>`;
+}
+
+function fmtDate(dateStr){
+  if(!dateStr) return 'Sin fecha';
+  const [y,m,d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// ---------- Data ----------
+loadPatients();
+
+function loadPatients(){
+  db.collection('pacientes')
+    .onSnapshot(snap => {
+      patients = [];
+      snap.forEach(doc => patients.push({ id: doc.id, ...doc.data() }));
+      renderDashboard();
+    }, err => console.error(err));
+}
+
+function sortedPatients(list){
+  return [...list].sort((a,b)=>{
+    const da = a.proximoSeguimiento, db_ = b.proximoSeguimiento;
+    if(!da && !db_) return a.nombre.localeCompare(b.nombre);
+    if(!da) return 1;
+    if(!db_) return -1;
+    return da.localeCompare(db_);
+  });
+}
+
+// ---------- Ronda de hoy ----------
+function todayStr(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function renderTodaySection(){
+  const hoy = todayStr();
+  const pendientes = patients
+    .filter(p => p.proximoSeguimiento && p.proximoSeguimiento <= hoy)
+    .sort((a,b)=>{
+      const ra = a.habitacion || '', rb = b.habitacion || '';
+      if(ra !== rb) return ra.localeCompare(rb, undefined, {numeric:true});
+      return a.nombre.localeCompare(b.nombre);
+    });
+
+  const container = document.getElementById('todaySection');
+  const fechaBonita = new Date().toLocaleDateString('es-CO', {weekday:'long', day:'numeric', month:'long'});
+
+  if(pendientes.length === 0){
+    container.innerHTML = `<div class="today-box">
+      <h2>Ronda de hoy</h2>
+      <div class="today-sub">${fechaBonita}</div>
+      <div class="empty-today">No tienes pacientes pendientes de ver hoy.</div>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="today-box">
+    <h2>Ronda de hoy (${pendientes.length})</h2>
+    <div class="today-sub">${fechaBonita}</div>
+    ${pendientes.map(p => `
+      <div class="today-item" data-id="${p.id}">
+        <span class="room">${p.habitacion ? escapeHtml(p.habitacion) : '—'}</span>
+        <span class="name">${escapeHtml(p.nombre)}</span>
+        ${urgencyBadge(p.proximoSeguimiento)}
+      </div>
+    `).join('')}
+  </div>`;
+
+  container.querySelectorAll('.today-item').forEach(item=>{
+    item.addEventListener('click', ()=> openDetail(item.dataset.id));
+  });
+}
+
+// ---------- Dashboard ----------
+function renderDashboard(){
+  renderTodaySection();
+  const term = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = patients.filter(p => p.nombre.toLowerCase().includes(term));
+  const list = sortedPatients(filtered);
+  const container = document.getElementById('patientList');
+
+  if(list.length === 0){
+    container.innerHTML = `<div class="empty-state">
+      <h3>${patients.length === 0 ? 'Aún no tienes pacientes registrados' : 'No hay resultados'}</h3>
+      <p>${patients.length === 0 ? 'Agrega el primero con "+ Nuevo paciente".' : 'Prueba con otro nombre.'}</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(p => `
+    <div class="patient-card" data-id="${p.id}">
+      <div>
+        <div class="name">${escapeHtml(p.nombre)}</div>
+        <div class="meta">${p.habitacion ? 'Hab. ' + escapeHtml(p.habitacion) + ' · ' : ''}${p.telefono ? escapeHtml(p.telefono) : ''}${p.proximoSeguimiento ? ((p.habitacion || p.telefono) ? ' · ' : '') + 'Próximo: ' + fmtDate(p.proximoSeguimiento) : ''}</div>
+      </div>
+      ${urgencyBadge(p.proximoSeguimiento)}
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.patient-card').forEach(card=>{
+    card.addEventListener('click', ()=> openDetail(card.dataset.id));
+  });
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+document.getElementById('searchInput').addEventListener('input', renderDashboard);
+
+// ---------- Tabs ----------
+document.getElementById('tabTodayBtn').addEventListener('click', ()=> switchTab('today'));
+document.getElementById('tabPatientsBtn').addEventListener('click', ()=> switchTab('patients'));
+
+function switchTab(tab){
+  document.getElementById('todayPanel').classList.toggle('hidden', tab !== 'today');
+  document.getElementById('patientsPanel').classList.toggle('hidden', tab !== 'patients');
+  document.getElementById('tabTodayBtn').classList.toggle('active', tab === 'today');
+  document.getElementById('tabPatientsBtn').classList.toggle('active', tab === 'patients');
+}
+
+// ---------- Detail view ----------
+function openDetail(id){
+  activePatientId = id;
+  const p = patients.find(x => x.id === id);
+  if(!p) return;
+
+  document.getElementById('detailNombre').textContent = p.nombre;
+  document.getElementById('detailTelefono').textContent = [
+    p.habitacion ? '🛏 Habitación ' + p.habitacion : '',
+    p.telefono ? '📞 ' + p.telefono : ''
+  ].filter(Boolean).join('  ·  ');
+  document.getElementById('detailNotasTextarea').value = p.notas || '';
+
+  document.getElementById('dashboardView').classList.add('hidden');
+  document.getElementById('detailView').classList.remove('hidden');
+
+  document.getElementById('segFecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('segNota').value = '';
+  document.getElementById('segProxima').value = p.proximoSeguimiento || '';
+
+  loadTimeline(id);
+}
+
+document.getElementById('saveNotasBtn').addEventListener('click', async ()=>{
+  if(!activePatientId) return;
+  const notas = document.getElementById('detailNotasTextarea').value.trim();
+  try{
+    await db.collection('pacientes').doc(activePatientId).update({ notas });
+    showToast('Nota guardada');
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo guardar la nota');
+  }
+});
+
+document.getElementById('copyNotasBtn').addEventListener('click', ()=>{
+  const notas = document.getElementById('detailNotasTextarea').value.trim();
+  if(!notas){ showToast('No hay nada que copiar'); return; }
+  copyToClipboard(notas);
+});
+
+document.getElementById('backBtn').addEventListener('click', ()=>{
+  document.getElementById('detailView').classList.add('hidden');
+  document.getElementById('dashboardView').classList.remove('hidden');
+  activePatientId = null;
+});
+
+function loadTimeline(patientId){
+  db.collection('pacientes').doc(patientId).collection('seguimientos')
+    .orderBy('fecha', 'desc')
+    .onSnapshot(snap => {
+      const items = [];
+      snap.forEach(doc => items.push(doc.data()));
+      const container = document.getElementById('timelineList');
+      if(items.length === 0){
+        container.innerHTML = `<div class="empty-state"><p>Todavía no hay seguimientos registrados.</p></div>`;
+        return;
+      }
+      container.innerHTML = items.map((it, idx) => `
+        <div class="timeline-item">
+          <div class="fecha">${fmtDate(it.fecha)}</div>
+          ${it.nota ? `<div class="nota">${escapeHtml(it.nota)}</div>` : ''}
+          ${it.proximaFecha ? `<div class="proxima">Próximo seguimiento: ${fmtDate(it.proximaFecha)}</div>` : ''}
+          ${it.nota ? `<button class="copy-btn" data-idx="${idx}">Copiar</button>` : ''}
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.copy-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const it = items[btn.dataset.idx];
+          copyToClipboard(`${fmtDate(it.fecha)} — ${it.nota}`);
+        });
+      });
+    }, err => console.error(err));
+}
+
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text)
+    .then(()=> showToast('Copiado'))
+    .catch(()=>{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try{ document.execCommand('copy'); showToast('Copiado'); }
+      catch{ showToast('No se pudo copiar'); }
+      document.body.removeChild(ta);
+    });
+}
+
+document.getElementById('saveSegBtn').addEventListener('click', async ()=>{
+  if(!activePatientId) return;
+  const fecha = document.getElementById('segFecha').value;
+  const nota = document.getElementById('segNota').value.trim();
+  const proxima = document.getElementById('segProxima').value;
+
+  if(!fecha){
+    showToast('Falta la fecha de la sesión');
+    return;
+  }
+
+  try{
+    await db.collection('pacientes').doc(activePatientId).collection('seguimientos').add({
+      fecha, nota, proximaFecha: proxima || null,
+      creado: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await db.collection('pacientes').doc(activePatientId).update({
+      proximoSeguimiento: proxima || null
+    });
+    document.getElementById('segNota').value = '';
+    showToast('Seguimiento guardado');
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo guardar');
+  }
+});
+
+// ---------- Delete patient ----------
+document.getElementById('deletePatientBtn').addEventListener('click', async ()=>{
+  if(!activePatientId) return;
+  const p = patients.find(x => x.id === activePatientId);
+  if(!confirm(`¿Eliminar a ${p ? p.nombre : 'este paciente'}? Esto no se puede deshacer.`)) return;
+  try{
+    await db.collection('pacientes').doc(activePatientId).delete();
+    document.getElementById('detailView').classList.add('hidden');
+    document.getElementById('dashboardView').classList.remove('hidden');
+    activePatientId = null;
+    showToast('Paciente eliminado');
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo eliminar');
+  }
+});
+
+// ---------- New / Edit patient modal ----------
+function openModal(editId){
+  editingPatientId = editId || null;
+  const p = editId ? patients.find(x => x.id === editId) : null;
+
+  document.getElementById('modalTitle').textContent = editId ? 'Editar paciente' : 'Nuevo paciente';
+  document.getElementById('modalNombre').value = p ? p.nombre : '';
+  document.getElementById('modalTelefono').value = p ? (p.telefono || '') : '';
+  document.getElementById('modalHabitacion').value = p ? (p.habitacion || '') : '';
+  document.getElementById('modalNotas').value = p ? (p.notas || '') : '';
+  document.getElementById('modalProxima').value = p ? (p.proximoSeguimiento || '') : '';
+
+  document.getElementById('patientModal').classList.remove('hidden');
+}
+
+function closeModal(){
+  document.getElementById('patientModal').classList.add('hidden');
+  editingPatientId = null;
+}
+
+document.getElementById('newPatientBtn').addEventListener('click', ()=> openModal(null));
+document.getElementById('editPatientBtn').addEventListener('click', ()=> openModal(activePatientId));
+document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+
+document.getElementById('modalSaveBtn').addEventListener('click', async ()=>{
+  const nombre = document.getElementById('modalNombre').value.trim();
+  const telefono = document.getElementById('modalTelefono').value.trim();
+  const habitacion = document.getElementById('modalHabitacion').value.trim();
+  const notas = document.getElementById('modalNotas').value.trim();
+  const proxima = document.getElementById('modalProxima').value;
+
+  if(!nombre){
+    showToast('El nombre es obligatorio');
+    return;
+  }
+
+  try{
+    if(editingPatientId){
+      await db.collection('pacientes').doc(editingPatientId).update({
+        nombre, telefono, habitacion, notas, proximoSeguimiento: proxima || null
+      });
+      showToast('Datos actualizados');
+      if(activePatientId === editingPatientId){
+        setTimeout(()=> openDetail(editingPatientId), 150);
+      }
+    } else {
+      await db.collection('pacientes').add({
+        nombre, telefono, habitacion, notas,
+        proximoSeguimiento: proxima || null,
+        creado: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('Paciente agregado');
+    }
+    closeModal();
+  }catch(err){
+    console.error(err);
+    showToast('No se pudo guardar');
+  }
+});
+</script>
+</body>
+</html>
